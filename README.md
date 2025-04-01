@@ -85,6 +85,9 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE.md](LICENSE.m
 - [Material-UI](https://mui.com/)
 - [React DnD](https://react-dnd.github.io/react-dnd/about)
 
+## Web Site
+- [view](https://schedulerpoc.netlify.app/)
+
 ## 📞 Contacto
 
 Para cualquier pregunta o sugerencia, por favor abre un issue en el repositorio.
