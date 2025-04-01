@@ -1,16 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Scheduler, SchedulerData, ViewType, DATE_FORMAT, DemoData } from "react-big-schedule";
+import { Modal, Box, TextField, Button, Typography } from '@mui/material';
 import dayjs from "dayjs";
 import "react-big-schedule/dist/css/style.css";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import './App.css';
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 2,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2
+};
 
 /**
  * Main Scheduler Application Component
  * Implements a highly interactive scheduling component using react-big-schedule.
  * Features drag-and-drop functionality, event creation, editing, and resource management.
  */
-function App() {
+const App = () => {
+  const [openModal, setOpenModal] = useState(false);
+  const [eventData, setEventData] = useState({
+    name: '',
+    description: ''
+  });
+  const [tempEventData, setTempEventData] = useState(null);
   const refreshCounter = useRef(0);
   const schedulerDataRef = useRef(null);
 
@@ -86,7 +108,7 @@ function App() {
       resourceId: 'r2',
       title: 'R22332 has recurring tasks every week on Tuesday, Friday',
       rrule: 'FREQ=WEEKLY;DTSTART=20221219T013000Z;BYDAY=TU,FR',
-      bgColor: '#3759ab',
+      bgColor: '#0098DC',
     },
   ];
 
@@ -161,7 +183,12 @@ function App() {
    * @param {Object} event - The event that was clicked
    */
   const eventItemClick = (schedulerData, event) => {
-    alert(`Has hecho clic en el evento: ${event.title}`);
+
+    setOpenModal(true);
+    setEventData({
+      name: event.title,
+      description: event.description
+    });
     console.log(event);
   };
 
@@ -185,58 +212,65 @@ function App() {
       type,
       item
     });
-    console.log('Creating new event:', slotId, start, end);
+    
+    // Store temporary event data
+    setTempEventData({
+      schedulerData,
+      slotId,
+      start,
+      end
+    });
+    
+    // Reset form data
+    setEventData({
+      name: '',
+      description: ''
+    });
+    
+    // Open the modal
+    setOpenModal(true);
+  };
 
-    // Prompt user to enter a name for the event
-    const eventName = prompt('Ingrese el nombre del evento:', 'Nuevo evento');
+  const handleCreateEvent = () => {
+    if (!tempEventData || !eventData.name) return;
 
-    // If user cancels the prompt, don't create the event
-    if (eventName === null) {
-      return;
-    }
+    const { schedulerData, slotId, start, end } = tempEventData;
 
-    // Generate a unique ID for the new event - more robust approach
+    // Generate a unique ID for the new event
     let newFreshId = 1;
     if (schedulerData.events && schedulerData.events.length > 0) {
-      // Handle all possible cases including NaN values
       const ids = schedulerData.events.map(event => {
         const parsedId = parseInt(event.id);
-        // Return 0 for any NaN values to avoid issues
         return isNaN(parsedId) ? 0 : parsedId;
       });
-
+      
       newFreshId = Math.max(...ids) + 1;
-      // Ensure we never get a NaN ID
       if (isNaN(newFreshId)) {
         newFreshId = schedulerData.events.length + 1;
       }
     }
 
-    console.log('New event ID:', newFreshId);
-
-    // Create the new event object with all required properties
-    // Ensure the ID is a number, not a string
+    // Create the new event object
     const newEvent = {
       id: Number(newFreshId),
-      title: eventName,
-      description: 'Descripción del evento',
+      title: eventData.name,
+      description: eventData.description,
       start: start,
       end: end,
       resourceId: slotId,
-      bgColor: '#6495ED',
+      bgColor: `#${Math.floor(Math.random()*16777215).toString(16)}`,
       movable: true,
       resizable: true,
       showPopover: true
     };
 
-    // Add the new event to the schedulerData
+    // Add the event
     schedulerData.addEvent(newEvent);
-
-    // Force a full refresh with our custom update function
+    
+    // Update view and close modal
     updateViewModel(schedulerData);
-
-    // Notify user of successful creation
-    alert(`Evento "${eventName}" creado exitosamente!`);
+    setOpenModal(false);
+    setTempEventData(null);
   };
 
   /**
@@ -348,34 +382,81 @@ function App() {
   };
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="scheduler-container">
-        {/* The key prop forces React to recreate the component when it changes */}
-        <Scheduler
-          key={`scheduler-${state.refreshCount}`}
-          schedulerData={state.viewModel}
-          prevClick={prevClick}
-          nextClick={nextClick}
-          onSelectDate={onSelectDate}
-          onViewChange={onViewChange}
-          eventItemClick={eventItemClick}
-          viewEventClick={() => { }}
-          viewEventText="Ver"
-          viewEvent2Text={"Text"}
-          viewEvent2Click={() => { }}
-          updateEventStart={updateEventStart}
-          updateEventEnd={updateEventEnd}
-          moveEvent={moveEvent}
-          newEvent={newEvent}
-          onScrollLeft={onScrollLeft}
-          onScrollRight={onScrollRight}
-          onScrollTop={onScrollTop}
-          onScrollBottom={onScrollBottom}
-          toggleExpandFunc={toggleExpandFunc}
-          resizeEvent={resizeEvent}
-        />
-      </div>
-    </DndProvider>
+    <div className='app-container'>
+      <header className='header'>
+        <h1>Scheduler POC - React Big Schedule</h1>
+      </header>
+      <section className='scheduler-container'>
+        <DndProvider backend={HTML5Backend}>
+        <div className="scheduler-container">
+          {/* The key prop forces React to recreate the component when it changes */}
+          <Scheduler
+            className='scheduler-component'
+            key={`scheduler-${state.refreshCount}`}
+            schedulerData={state.viewModel}
+            prevClick={prevClick}
+            nextClick={nextClick}
+            onSelectDate={onSelectDate}
+            onViewChange={onViewChange}
+            eventItemClick={eventItemClick}
+            viewEventClick={() => {}}
+            viewEventText="View"
+            viewEvent2Text="Edit"
+            viewEvent2Click={() => {}}
+            updateEventStart={updateEventStart}
+            updateEventEnd={updateEventEnd}
+            moveEvent={moveEvent}
+            newEvent={newEvent}
+            onScrollLeft={onScrollLeft}
+            onScrollRight={onScrollRight}
+            onScrollTop={onScrollTop}
+            onScrollBottom={onScrollBottom}
+            toggleExpandFunc={toggleExpandFunc}
+            resizeEvent={resizeEvent}
+          />
+        </div>
+      </DndProvider>
+      
+      <Modal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        aria-labelledby="modal-title"
+        aria-describedby="modal-description"
+      >
+        <Box sx={modalStyle}>
+          <Typography id="modal-title" variant="h6" component="h2">
+            Create New Event
+          </Typography>
+          
+          <TextField
+            label="Event Name"
+            value={eventData.name}
+            onChange={(e) => setEventData(prev => ({ ...prev, name: e.target.value }))}
+            fullWidth
+            required
+          />
+          
+          <TextField
+            label="Event Description"
+            value={eventData.description}
+            onChange={(e) => setEventData(prev => ({ ...prev, description: e.target.value }))}
+            fullWidth
+            multiline
+            rows={3}
+          />
+          
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+            <Button onClick={() => setOpenModal(false)} color="inherit">
+              Cancel
+            </Button>
+            <Button onClick={handleCreateEvent} variant="contained" color="primary">
+              Create
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+    </section>
+    </div>
   );
 }
 
